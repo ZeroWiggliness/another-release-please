@@ -57,7 +57,7 @@
     "minimatch": "^10.2.5",
     "octokit": "^5.0.5",
     "semver": "^7.7.4",
-    "simple-git": "^3.35.2",
+    "simple-git": "^3.36.0",
     "yaml": "^2.8.3"
   }
 }
