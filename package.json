@@ -1,0 +1,63 @@
+{
+  "name": "@zerowiggliness/another-release-please",
+  "version": "0.1.5",
+  "description": "Another release please style variant for Github and Gitlab. Easy to extend.",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ZeroWiggliness/another-release-please.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "bin": {
+    "arp": "./dist/bin/arp.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && node ./dist/bin/arp.js",
+    "dev": "tsc && node --watch ./dist/bin/arp.js",
+    "test": "jest",
+    "test:run": "jest",
+    "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch",
+    "clean": "rimraf dist",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "release",
+    "gitlab",
+    "release-please",
+    "cli"
+  ],
+  "author": "Darren Vine",
+  "license": "MIT",
+  "engines": {
+    "node": ">=25.0.0 || ^24.0.0 || ^20.0.0"
+  },
+  "packageManager": "yarn@4.10.3",
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.5.2",
+    "@types/semver": "^7.7.1",
+    "jest": "^30.3.0",
+    "rimraf": "^6.1.3",
+    "ts-jest": "^29.4.9",
+    "typescript": "~6.0.2",
+    "vitest": "^4.1.3"
+  },
+  "dependencies": {
+    "@gitbeaker/node": "^35.8.1",
+    "handlebars": "^4.7.9",
+    "minimatch": "^10.2.5",
+    "octokit": "^5.0.5",
+    "semver": "^7.7.4",
+    "simple-git": "^3.35.2",
+    "yaml": "^2.8.3"
+  }
+}

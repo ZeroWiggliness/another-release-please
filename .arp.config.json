@@ -1,0 +1,19 @@
+{
+  "provider": "github",
+  "release": {
+    "prerelease": false,
+    "releaseBranchPrefix": "feature/",
+    "maxReleases": 10,
+    "maxCommits": 100,
+    "includeChores": false
+  },
+  "version": "v0.0.1",
+  "versionPrefix": "v",
+  "manifests": [
+    {
+      "path": ".",
+      "type": "node",
+      "version": "0.0.1"
+    }
+  ]
+}

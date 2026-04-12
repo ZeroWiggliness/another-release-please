@@ -1,0 +1,78 @@
+# Define the stages of the pipeline
+stages:
+  - release
+  - calculate-next
+  - release-pr
+
+.release_branch_rules: &release_branch_rules
+  rules:
+    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/v.*$/'
+
+# Job to handle the release process
+release_job:
+  stage: release
+  image:
+    # Use a specific Docker image for the job
+    name: darrenv/another-release-please:latest
+    entrypoint: [""]
+  script: |
+    # Enable strict error handling
+    set -euo pipefail
+    echo "Running arp release..."
+    # Run the release command and capture its output
+    release_output="$(arp release --repository "$CI_PROJECT_URL" --provider gitlab --token "$GITLAB_TOKEN" --target-branch $CI_COMMIT_BRANCH --use-file-system)"
+    echo "Release command output:"
+    printf '%s' "$release_output"
+    # Extract the last line of the output as JSON
+    release_json="$(printf '%s\n' "$release_output" | tail -n 1)"
+    # Parse the JSON to check if a release was created
+    release_created="$(printf '%s\n' "$release_json" | jq -r '.created')"
+    echo "RELEASE_CREATED=$release_created" > release.env
+  <<: *release_branch_rules
+  artifacts:
+    reports:
+      # Save the release environment variables as artifacts
+      dotenv: release.env
+
+# Job to calculate the next version
+calculate_next_job:
+  stage: calculate-next
+  needs:
+    # This job depends on the release_job and its artifacts
+    - job: release_job
+      artifacts: true
+  image:
+    # Use the same Docker image as the release job
+    name: darrenv/another-release-please:latest
+    entrypoint: [""]
+  script: |
+    # Skip this job if no release was created
+    if [ "$RELEASE_CREATED" != "true" ]; then
+      echo "Skipping calculate-next because RELEASE_CREATED=$RELEASE_CREATED"
+      exit 0
+    fi
+    # Run the calculate-next command
+    arp calculate-next --repository "$CI_PROJECT_URL" --provider gitlab --token "$GITLAB_TOKEN" --target-branch $CI_COMMIT_BRANCH --prerelease --use-file-system
+  <<: *release_branch_rules
+
+# Job to create a release pull request
+release_pr_job:
+  stage: release-pr
+  needs:
+    # This job depends on the release job and its artifacts
+    - job: release_job
+      artifacts: true
+  image:
+    # Use the same Docker image as the other jobs
+    name: darrenv/another-release-please:latest
+    entrypoint: [""]
+  script: |
+    # Skip this job if a release was created
+    if [ "$RELEASE_CREATED" != "false" ]; then
+      echo "Skipping release-pr because RELEASE_CREATED=$RELEASE_CREATED"
+      exit 0
+    fi
+    # Run the release-pr command
+    arp release-pr --repository "$CI_PROJECT_URL" --provider gitlab --token "$GITLAB_TOKEN" --target-branch $CI_COMMIT_BRANCH --use-file-system
+  <<: *release_branch_rules

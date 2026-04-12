@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Source files (we only need dist/)
+src/
+bin/
+test/
+
+# Git
+.git/
+.github/
+.gitignore
+
+# Config files
+tsconfig.json
+jest.config.cjs
+
+# Documentation
+*.md
+General.md
+README.md
+LICENSE
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+.env
+.env.*
+coverage/
+.cache/

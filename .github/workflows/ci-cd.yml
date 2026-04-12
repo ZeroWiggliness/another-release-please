@@ -1,0 +1,159 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    outputs:
+      manifest-current-version-0: ${{ steps.auto-release.outputs.manifest-current-version-0 }}
+      build-release: ${{ steps.auto-release.outputs.created }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Auto Release
+        id: auto-release
+        uses: ZeroWiggliness/another-release-please-action@master
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        with:
+          command: release, release-pr
+          token: ${{ secrets.GITHUB_TOKEN }}
+          target-branch: master
+          dry-run: false
+
+      - name: Log Auto Release outputs
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        run: echo '${{ toJSON(steps.auto-release.outputs) }}'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: "yarn"
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build
+        run: yarn build
+
+      - name: Run tests with coverage
+        run: yarn test:coverage
+
+      - name: Code Coverage Report
+        id: coverage
+        uses: ZeroWiggliness/CodeCoverageAdv@v1
+        with:
+          cobertura-file: "coverage/cobertura-coverage.xml"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          file-filters: "src/**/*.ts,!src/**/*.d.ts"
+
+      - name: Add coverage comment to PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: coverage
+          message: |
+            ${{ steps.coverage.outputs.coverage-badge }}
+            ## Coverage Report
+            ${{ steps.coverage.outputs.coverage-markdown }}
+            ## Changed Files Coverage
+            ${{ steps.coverage.outputs.coverage-changes-markdown }}
+
+      - name: Upload build artifacts
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        uses: actions/upload-artifact@v7
+        with:
+          name: docker-runtime
+          path: dist/
+          retention-days: 1
+
+  publish-npm:
+    name: Publish to GitHub Packages
+    needs: build-and-test
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push' && needs.build-and-test.outputs.build-release == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: "yarn"
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@zerowiggliness"
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build
+        run: yarn build
+
+      - name: Publish package
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-docker:
+    name: Build and Publish Docker Image
+    needs: build-and-test
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push' && needs.build-and-test.outputs.build-release == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Download prebuilt runtime bundle
+        uses: actions/download-artifact@v8
+        with:
+          name: docker-runtime
+          path: dist/
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to Docker Container Registry
+        uses: docker/login-action@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          load: true
+          tags: |
+            darrenv/another-release-please:latest
+            darrenv/another-release-please:v${{ needs.build-and-test.outputs.manifest-current-version-0 }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,0 +1,47 @@
+{
+  "provider": "gitlab",
+  "gitlab": {
+    "repository": "https://gitlab.com/owner/repo"
+  },
+  "release": {
+    "prerelease": false,
+    "targetBranch": "main",
+    "releaseBranchPrefix": "release",
+    "maxReleases": 10,
+    "maxCommits": 100,
+    "includeChores": false
+  },
+  "version": "v1.0.0",
+  "versionPrefix": "v",
+  "type": "simple",
+  "manifests": [
+    {
+      "path": "."
+    },
+    {
+      "path": "sub-module",
+      "version": "v0.2.0"
+    },
+    {
+      "path": "app",
+      "version": "app-1.0.0",
+      "versionPrefix": "app-"
+    },
+    {
+      "path": "./src",
+      "type": "custom",
+      "files": [
+        {
+          "path": "legacy/version.txt",
+          "filetype": "text",
+          "versionPatterns": ["\\d+\\.\\d+\\.\\d+"]
+        },
+        {
+          "path": "**/pom.xml",
+          "filetype": "xml",
+          "versionPatterns": ["<version>[^<]+</version>"]
+        }
+      ]
+    }
+  ]
+}
