@@ -49,7 +49,7 @@
     "rimraf": "^6.1.3",
     "ts-jest": "^29.4.9",
     "typescript": "~6.0.2",
-    "vitest": "^4.1.3"
+    "vitest": "^4.1.4"
   },
   "dependencies": {
     "@gitbeaker/node": "^35.8.1",
