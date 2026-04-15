@@ -2,7 +2,7 @@
 
 # another-release-please
 
-another-release-please is a release automation CLI for GitHub and GitLab repositories that use conventional commits and manifest-driven version updates. It follows a release-please style workflow, but adds explicit manifest processing, GitLab support, and more control over how versioned files are discovered and updated. 
+another-release-please is a release automation CLI for GitHub and GitLab repositories that use conventional commits and manifest-driven version updates. It follows a release-please style workflow, but adds explicit manifest processing, GitLab support, and more control over how versioned files are discovered and updated.
 
 ## Features
 
