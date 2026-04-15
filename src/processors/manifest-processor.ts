@@ -159,18 +159,33 @@ export class ManifestProcessor {
   }
 
   /**
-   * Replace capture group 1 in each regex pattern with newVersion.
+   * Replace the version value in each regex pattern with newVersion.
    * Only replaces the first match per pattern (no `g` flag) to avoid
    * clobbering dependency version entries (e.g. in pom.xml).
+   *
+   * Two calling conventions are supported:
+   *  - Zero capture groups: the entire match is replaced with newVersion.
+   *  - One capture group: group1 is the version value; the first occurrence of
+   *    group1 within the match is replaced.  Works correctly when the version
+   *    value is unique inside the match.
+   *  - Two capture groups: group1 is the text that precedes the version value,
+   *    group2 is the text that follows it.  The replacement is
+   *    `group1 + newVersion + group2`, which is unambiguous regardless of
+   *    whether the version value appears elsewhere in the surrounding context
+   *    (e.g. inside a Maven <parent> block that has the same version).
    */
   private applyVersionText(content: string, patterns: string[], newVersion: string): string {
     let result = content;
     for (const pattern of patterns) {
       const re = new RegExp(pattern);
-      result = result.replace(re, (match, group1) => {
+      result = result.replace(re, (match, group1, group2) => {
         if (group1 === undefined) {
           // Pattern has no capture group — replace entire match
           return newVersion;
+        }
+        if (typeof group2 === 'string') {
+          // Two-group pattern: group1 is prefix, group2 is suffix
+          return group1 + newVersion + group2;
         }
         return match.replace(group1, newVersion);
       });

@@ -14,6 +14,19 @@
       "path": ".",
       "type": "node",
       "version": "0.1.0"
+    },
+    {
+      "path": ".",
+      "type": "custom",
+      "version": "0.1.0",
+      "versionPrefix": "v",
+      "files": [
+        {
+          "path": "README.md",
+          "filetype": "text",
+          "versionPatterns": ["(https://img\\.shields\\.io/badge/version-)[^-]+(-blue)"]
+        }
+      ]
     }
   ]
 }

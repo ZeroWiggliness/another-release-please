@@ -84,8 +84,9 @@ describe('JavaPackageManifest', () => {
   describe('version pattern', () => {
     function applyPattern(pattern: string, content: string, newVersion: string): string {
       const re = new RegExp(pattern);
-      return content.replace(re, (match, group1) => {
+      return content.replace(re, (match, group1, group2) => {
         if (group1 === undefined) return newVersion;
+        if (typeof group2 === 'string') return group1 + newVersion + group2;
         return match.replace(group1, newVersion);
       });
     }
@@ -139,6 +140,32 @@ describe('JavaPackageManifest', () => {
       expect(updated).toContain('<version>2.0.0</version>');
       // Parent version should be unchanged
       expect(updated).toContain('<version>3.0.0</version>');
+    });
+
+    const pomWithSameParentAndProjectVersion = `<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.example</groupId>
+    <artifactId>parent</artifactId>
+    <version>1.2.3</version>
+  </parent>
+  <artifactId>my-service</artifactId>
+  <version>1.2.3</version>
+</project>`;
+
+    test('version pattern updates project version when parent version equals project version', () => {
+      const manifest = makeManifest();
+      const processor = new JavaPackageManifest(manifest, fakeProvider);
+      const result = processor.process([]);
+      const versionPattern = result.fileOperations[0].versionPatterns[0];
+
+      const updated = applyPattern(versionPattern, pomWithSameParentAndProjectVersion, '2.0.0');
+
+      // Project version must be updated
+      expect(updated).toContain('<version>2.0.0</version>');
+      // Parent version must remain unchanged
+      const parentVersionMatch = updated.match(/<parent>[\s\S]*?<version>([^<]+)<\/version>[\s\S]*?<\/parent>/);
+      expect(parentVersionMatch?.[1]).toBe('1.2.3');
     });
   });
 });

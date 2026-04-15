@@ -29,7 +29,11 @@ export class JavaPackageManifest extends PackageManifest {
       {
         path: pomPath,
         filetype: 'xml',
-        versionPatterns: ['<project\\b[^>]*>(?:[\\s\\S]*?<parent\\b[^>]*>[\\s\\S]*?</parent>)?[\\s\\S]*?<version>([^<]+)</version>'],
+        // Two capture groups: group1 is the prefix up to and including the opening <version> tag,
+        // group2 is the closing </version> tag. The version value sits between the two groups and
+        // is replaced directly, so the replacement is unambiguous even when the parent block
+        // contains a <version> element with an identical value.
+        versionPatterns: ['(<project\\b[^>]*>(?:[\\s\\S]*?<parent\\b[^>]*>[\\s\\S]*?</parent>)?[\\s\\S]*?<version>)[^<]+(</version>)'],
       },
     ];
   }
