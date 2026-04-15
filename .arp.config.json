@@ -24,7 +24,7 @@
         {
           "path": "README.md",
           "filetype": "text",
-          "versionPatterns": ["(https://img\\.shields\\.io/badge/version-)[^-]+(-blue)"]
+          "versionPatterns": ["https://img\\.shields\\.io/badge/version-([^-]+)-blue"]
         }
       ]
     }
