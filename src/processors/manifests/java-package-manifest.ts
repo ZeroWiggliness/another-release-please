@@ -33,7 +33,15 @@ export class JavaPackageManifest extends PackageManifest {
         // group2 is the closing </version> tag. The version value sits between the two groups and
         // is replaced directly, so the replacement is unambiguous even when the parent block
         // contains a <version> element with an identical value.
-        versionPatterns: ['(<project\\b[^>]*>(?:[\\s\\S]*?<parent\\b[^>]*>[\\s\\S]*?</parent>)?[\\s\\S]*?<version>)[^<]+(</version>)'],
+        //
+        // The alternation handles both valid orderings of the project-level <version> element:
+        //   Branch 1: <version> appears before <parent> (or there is no <parent> block).
+        //             Stops advancing as soon as <parent is encountered, so only the
+        //             project-level version — not the parent version — is matched.
+        //   Branch 2: <version> appears after <parent>.
+        //             Skips over the entire <parent>…</parent> block, then matches the
+        //             first <version> element that follows.
+        versionPatterns: ['(<project\\b[^>]*>(?:(?!<parent\\b)[\\s\\S])*?<version>|<project\\b[^>]*>(?:[\\s\\S]*?<parent\\b[^>]*>[\\s\\S]*?</parent>)[\\s\\S]*?<version>)[^<]+(</version>)'],
       },
     ];
   }

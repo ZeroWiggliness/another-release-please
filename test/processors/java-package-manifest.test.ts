@@ -167,5 +167,106 @@ describe('JavaPackageManifest', () => {
       const parentVersionMatch = updated.match(/<parent>[\s\S]*?<version>([^<]+)<\/version>[\s\S]*?<\/parent>/);
       expect(parentVersionMatch?.[1]).toBe('1.2.3');
     });
+
+    const realWorldSimplePom = `<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.gk-software.core.cloud.etlf</groupId>
+  <name>Ingest transaction Route</name>
+  <version>1.2.3</version>
+  <packaging>jar</packaging>
+</project>`;
+
+    test('version pattern updates project version in a simple POM with no parent or dependencies', () => {
+      const manifest = makeManifest();
+      const processor = new JavaPackageManifest(manifest, fakeProvider);
+      const result = processor.process([]);
+      const versionPattern = result.fileOperations[0].versionPatterns[0];
+
+      const updated = applyPattern(versionPattern, realWorldSimplePom, '2.0.0');
+
+      expect(updated).toContain('<version>2.0.0</version>');
+    });
+
+    const realWorldPomVersionBeforeParent = `<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.gk-software.core.cloud.etlf</groupId>
+  <name>Ingest transaction Route</name>
+  <version>1.2.3</version>
+  <packaging>jar</packaging>
+
+  <parent>
+    <groupId>com.gk-software.core.maven</groupId>
+    <artifactId>mod-pom-global</artifactId>
+    <version>3.0.0</version>
+    <relativePath />
+  </parent>
+</project>`;
+
+    test('version pattern updates project version when it appears before the parent block', () => {
+      const manifest = makeManifest();
+      const processor = new JavaPackageManifest(manifest, fakeProvider);
+      const result = processor.process([]);
+      const versionPattern = result.fileOperations[0].versionPatterns[0];
+
+      const updated = applyPattern(versionPattern, realWorldPomVersionBeforeParent, '2.0.0');
+
+      expect(updated).toContain('<version>2.0.0</version>');
+      // Parent version must remain unchanged
+      const parentVersionMatch = updated.match(/<parent>[\s\S]*?<version>([^<]+)<\/version>[\s\S]*?<\/parent>/);
+      expect(parentVersionMatch?.[1]).toBe('3.0.0');
+    });
+
+    const realWorldPomVersionBeforeParentWithDependencyManagement = `<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.gk-software.core.cloud.etlf</groupId>
+  <name>Ingest transaction Route</name>
+  <version>1.2.3</version>
+  <packaging>jar</packaging>
+
+  <parent>
+    <groupId>com.gk-software.core.maven</groupId>
+    <artifactId>mod-pom-global</artifactId>
+    <version>3.0.0</version>
+    <relativePath />
+  </parent>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.gk-software.core.cloud.etlf</groupId>
+        <artifactId>integration-etlf</artifactId>
+        <version>4.5.6</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>net.java.dev.jna</groupId>
+        <artifactId>jna-platform</artifactId>
+        <version>5.12.0</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+</project>`;
+
+    test('version pattern updates only project version when it appears before parent and dependencyManagement blocks', () => {
+      const manifest = makeManifest();
+      const processor = new JavaPackageManifest(manifest, fakeProvider);
+      const result = processor.process([]);
+      const versionPattern = result.fileOperations[0].versionPatterns[0];
+
+      const updated = applyPattern(versionPattern, realWorldPomVersionBeforeParentWithDependencyManagement, '2.0.0');
+
+      expect(updated).toContain('<version>2.0.0</version>');
+      // Parent version must remain unchanged
+      const parentVersionMatch = updated.match(/<parent>[\s\S]*?<version>([^<]+)<\/version>[\s\S]*?<\/parent>/);
+      expect(parentVersionMatch?.[1]).toBe('3.0.0');
+      // Managed dependency versions must remain unchanged
+      expect(updated).toContain('<version>4.5.6</version>');
+      expect(updated).toContain('<version>5.12.0</version>');
+    });
   });
 });
