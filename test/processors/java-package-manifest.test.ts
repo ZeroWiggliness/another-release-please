@@ -167,5 +167,362 @@ describe('JavaPackageManifest', () => {
       const parentVersionMatch = updated.match(/<parent>[\s\S]*?<version>([^<]+)<\/version>[\s\S]*?<\/parent>/);
       expect(parentVersionMatch?.[1]).toBe('1.2.3');
     });
+
+    const realWorldSimplePom = `<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.example.myapp</groupId>
+  <name>My Application</name>
+  <version>1.2.3</version>
+  <packaging>jar</packaging>
+</project>`;
+
+    test('version pattern updates project version in a simple POM with no parent or dependencies', () => {
+      const manifest = makeManifest();
+      const processor = new JavaPackageManifest(manifest, fakeProvider);
+      const result = processor.process([]);
+      const versionPattern = result.fileOperations[0].versionPatterns[0];
+
+      const updated = applyPattern(versionPattern, realWorldSimplePom, '2.0.0');
+
+      expect(updated).toContain('<version>2.0.0</version>');
+    });
+
+    const realWorldPomVersionBeforeParent = `<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.example.myapp</groupId>
+  <name>My Application</name>
+  <version>1.2.3</version>
+  <packaging>jar</packaging>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.0.0</version>
+    <relativePath />
+  </parent>
+</project>`;
+
+    test('version pattern updates project version when it appears before the parent block', () => {
+      const manifest = makeManifest();
+      const processor = new JavaPackageManifest(manifest, fakeProvider);
+      const result = processor.process([]);
+      const versionPattern = result.fileOperations[0].versionPatterns[0];
+
+      const updated = applyPattern(versionPattern, realWorldPomVersionBeforeParent, '2.0.0');
+
+      expect(updated).toContain('<version>2.0.0</version>');
+      // Parent version must remain unchanged
+      const parentVersionMatch = updated.match(/<parent>[\s\S]*?<version>([^<]+)<\/version>[\s\S]*?<\/parent>/);
+      expect(parentVersionMatch?.[1]).toBe('3.0.0');
+    });
+
+    const realWorldPomVersionBeforeParentWithDependencyManagement = `<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.example.myapp</groupId>
+  <name>My Application</name>
+  <version>1.2.3</version>
+  <packaging>jar</packaging>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.0.0</version>
+    <relativePath />
+  </parent>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.fasterxml.jackson</groupId>
+        <artifactId>jackson-bom</artifactId>
+        <version>2.15.0</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>\${jackson.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+</project>`;
+
+    test('version pattern updates only project version when it appears before parent and dependencyManagement blocks', () => {
+      const manifest = makeManifest();
+      const processor = new JavaPackageManifest(manifest, fakeProvider);
+      const result = processor.process([]);
+      const versionPattern = result.fileOperations[0].versionPatterns[0];
+
+      const updated = applyPattern(versionPattern, realWorldPomVersionBeforeParentWithDependencyManagement, '2.0.0');
+
+      expect(updated).toContain('<version>2.0.0</version>');
+      // Parent version must remain unchanged
+      const parentVersionMatch = updated.match(/<parent>[\s\S]*?<version>([^<]+)<\/version>[\s\S]*?<\/parent>/);
+      expect(parentVersionMatch?.[1]).toBe('3.0.0');
+      // Managed dependency versions must remain unchanged
+      expect(updated).toContain('<version>2.15.0</version>');
+      expect(updated).toContain('<version>${jackson.version}</version>');
+    });
+
+    const pomVersionAfterParentAndDepMgmt = `<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.example</groupId>
+    <artifactId>parent</artifactId>
+    <version>3.0.0</version>
+  </parent>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.baz</groupId>
+        <artifactId>bom</artifactId>
+        <version>9.0.0</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+  <artifactId>my-service</artifactId>
+  <version>1.2.3</version>
+</project>`;
+
+    test('version pattern updates project version when it appears after parent and dependencyManagement blocks', () => {
+      const manifest = makeManifest();
+      const processor = new JavaPackageManifest(manifest, fakeProvider);
+      const result = processor.process([]);
+      const versionPattern = result.fileOperations[0].versionPatterns[0];
+
+      const updated = applyPattern(versionPattern, pomVersionAfterParentAndDepMgmt, '2.0.0');
+
+      expect(updated).toContain('<version>2.0.0</version>');
+      const parentVersionMatch = updated.match(/<parent>[\s\S]*?<version>([^<]+)<\/version>[\s\S]*?<\/parent>/);
+      expect(parentVersionMatch?.[1]).toBe('3.0.0');
+      expect(updated).toContain('<version>9.0.0</version>');
+    });
+
+    const pomVersionAfterParentAndDependencies = `<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.example</groupId>
+    <artifactId>parent</artifactId>
+    <version>3.0.0</version>
+  </parent>
+  <dependencies>
+    <dependency>
+      <groupId>org.foo</groupId>
+      <artifactId>bar</artifactId>
+      <version>8.0.0</version>
+    </dependency>
+  </dependencies>
+  <artifactId>my-service</artifactId>
+  <version>1.2.3</version>
+</project>`;
+
+    test('version pattern updates project version when it appears after parent and dependencies blocks', () => {
+      const manifest = makeManifest();
+      const processor = new JavaPackageManifest(manifest, fakeProvider);
+      const result = processor.process([]);
+      const versionPattern = result.fileOperations[0].versionPatterns[0];
+
+      const updated = applyPattern(versionPattern, pomVersionAfterParentAndDependencies, '2.0.0');
+
+      expect(updated).toContain('<version>2.0.0</version>');
+      const parentVersionMatch = updated.match(/<parent>[\s\S]*?<version>([^<]+)<\/version>[\s\S]*?<\/parent>/);
+      expect(parentVersionMatch?.[1]).toBe('3.0.0');
+      expect(updated).toContain('<version>8.0.0</version>');
+    });
+
+    const pomVersionAfterParentAndBuild = `<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.example</groupId>
+    <artifactId>parent</artifactId>
+    <version>3.0.0</version>
+  </parent>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.11.0</version>
+      </plugin>
+    </plugins>
+  </build>
+  <artifactId>my-service</artifactId>
+  <version>1.2.3</version>
+</project>`;
+
+    test('version pattern updates project version when it appears after parent and build blocks', () => {
+      const manifest = makeManifest();
+      const processor = new JavaPackageManifest(manifest, fakeProvider);
+      const result = processor.process([]);
+      const versionPattern = result.fileOperations[0].versionPatterns[0];
+
+      const updated = applyPattern(versionPattern, pomVersionAfterParentAndBuild, '2.0.0');
+
+      expect(updated).toContain('<version>2.0.0</version>');
+      const parentVersionMatch = updated.match(/<parent>[\s\S]*?<version>([^<]+)<\/version>[\s\S]*?<\/parent>/);
+      expect(parentVersionMatch?.[1]).toBe('3.0.0');
+      expect(updated).toContain('<version>3.11.0</version>');
+    });
+
+    const pomVersionAfterParentAndReporting = `<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.example</groupId>
+    <artifactId>parent</artifactId>
+    <version>3.0.0</version>
+  </parent>
+  <reporting>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.5.0</version>
+      </plugin>
+    </plugins>
+  </reporting>
+  <artifactId>my-service</artifactId>
+  <version>1.2.3</version>
+</project>`;
+
+    test('version pattern updates project version when it appears after parent and reporting blocks', () => {
+      const manifest = makeManifest();
+      const processor = new JavaPackageManifest(manifest, fakeProvider);
+      const result = processor.process([]);
+      const versionPattern = result.fileOperations[0].versionPatterns[0];
+
+      const updated = applyPattern(versionPattern, pomVersionAfterParentAndReporting, '2.0.0');
+
+      expect(updated).toContain('<version>2.0.0</version>');
+      const parentVersionMatch = updated.match(/<parent>[\s\S]*?<version>([^<]+)<\/version>[\s\S]*?<\/parent>/);
+      expect(parentVersionMatch?.[1]).toBe('3.0.0');
+      expect(updated).toContain('<version>3.5.0</version>');
+    });
+
+    const pomVersionAfterParentAndProfiles = `<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.example</groupId>
+    <artifactId>parent</artifactId>
+    <version>3.0.0</version>
+  </parent>
+  <profiles>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
+            <version>1.6.7</version>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+  <artifactId>my-service</artifactId>
+  <version>1.2.3</version>
+</project>`;
+
+    test('version pattern updates project version when it appears after parent and profiles blocks', () => {
+      const manifest = makeManifest();
+      const processor = new JavaPackageManifest(manifest, fakeProvider);
+      const result = processor.process([]);
+      const versionPattern = result.fileOperations[0].versionPatterns[0];
+
+      const updated = applyPattern(versionPattern, pomVersionAfterParentAndProfiles, '2.0.0');
+
+      expect(updated).toContain('<version>2.0.0</version>');
+      const parentVersionMatch = updated.match(/<parent>[\s\S]*?<version>([^<]+)<\/version>[\s\S]*?<\/parent>/);
+      expect(parentVersionMatch?.[1]).toBe('3.0.0');
+      expect(updated).toContain('<version>1.6.7</version>');
+    });
+
+    const pomVersionAfterAllBlocks = `<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.example</groupId>
+    <artifactId>parent</artifactId>
+    <version>3.0.0</version>
+  </parent>
+  <dependencies>
+    <dependency>
+      <groupId>org.foo</groupId>
+      <artifactId>bar</artifactId>
+      <version>8.0.0</version>
+    </dependency>
+  </dependencies>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.baz</groupId>
+        <artifactId>bom</artifactId>
+        <version>9.0.0</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.11.0</version>
+      </plugin>
+    </plugins>
+  </build>
+  <reporting>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.5.0</version>
+      </plugin>
+    </plugins>
+  </reporting>
+  <profiles>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
+            <version>1.6.7</version>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+  <artifactId>my-service</artifactId>
+  <version>1.2.3</version>
+</project>`;
+
+    test('version pattern updates only project version when it appears after all known container blocks', () => {
+      const manifest = makeManifest();
+      const processor = new JavaPackageManifest(manifest, fakeProvider);
+      const result = processor.process([]);
+      const versionPattern = result.fileOperations[0].versionPatterns[0];
+
+      const updated = applyPattern(versionPattern, pomVersionAfterAllBlocks, '2.0.0');
+
+      expect(updated).toContain('<version>2.0.0</version>');
+      // All other versions must remain untouched
+      const parentVersionMatch = updated.match(/<parent>[\s\S]*?<version>([^<]+)<\/version>[\s\S]*?<\/parent>/);
+      expect(parentVersionMatch?.[1]).toBe('3.0.0');
+      expect(updated).toContain('<version>8.0.0</version>');
+      expect(updated).toContain('<version>9.0.0</version>');
+      expect(updated).toContain('<version>3.11.0</version>');
+      expect(updated).toContain('<version>3.5.0</version>');
+      expect(updated).toContain('<version>1.6.7</version>');
+    });
   });
 });
