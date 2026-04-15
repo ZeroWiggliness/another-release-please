@@ -171,8 +171,8 @@ describe('JavaPackageManifest', () => {
     const realWorldSimplePom = `<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>com.gk-software.core.cloud.etlf</groupId>
-  <name>Ingest transaction Route</name>
+  <groupId>com.example.myapp</groupId>
+  <name>My Application</name>
   <version>1.2.3</version>
   <packaging>jar</packaging>
 </project>`;
@@ -191,14 +191,14 @@ describe('JavaPackageManifest', () => {
     const realWorldPomVersionBeforeParent = `<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>com.gk-software.core.cloud.etlf</groupId>
-  <name>Ingest transaction Route</name>
+  <groupId>com.example.myapp</groupId>
+  <name>My Application</name>
   <version>1.2.3</version>
   <packaging>jar</packaging>
 
   <parent>
-    <groupId>com.gk-software.core.maven</groupId>
-    <artifactId>mod-pom-global</artifactId>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
     <version>3.0.0</version>
     <relativePath />
   </parent>
@@ -221,14 +221,14 @@ describe('JavaPackageManifest', () => {
     const realWorldPomVersionBeforeParentWithDependencyManagement = `<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>com.gk-software.core.cloud.etlf</groupId>
-  <name>Ingest transaction Route</name>
+  <groupId>com.example.myapp</groupId>
+  <name>My Application</name>
   <version>1.2.3</version>
   <packaging>jar</packaging>
 
   <parent>
-    <groupId>com.gk-software.core.maven</groupId>
-    <artifactId>mod-pom-global</artifactId>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
     <version>3.0.0</version>
     <relativePath />
   </parent>
@@ -236,17 +236,17 @@ describe('JavaPackageManifest', () => {
   <dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>com.gk-software.core.cloud.etlf</groupId>
-        <artifactId>integration-etlf</artifactId>
-        <version>4.5.6</version>
+        <groupId>com.fasterxml.jackson</groupId>
+        <artifactId>jackson-bom</artifactId>
+        <version>2.15.0</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
 
       <dependency>
-        <groupId>net.java.dev.jna</groupId>
-        <artifactId>jna-platform</artifactId>
-        <version>${jna-platform.version}</version>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>\${jackson.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -265,8 +265,8 @@ describe('JavaPackageManifest', () => {
       const parentVersionMatch = updated.match(/<parent>[\s\S]*?<version>([^<]+)<\/version>[\s\S]*?<\/parent>/);
       expect(parentVersionMatch?.[1]).toBe('3.0.0');
       // Managed dependency versions must remain unchanged
-      expect(updated).toContain('<version>4.5.6</version>');
-      expect(updated).toContain('<version>5.12.0</version>');
+      expect(updated).toContain('<version>2.15.0</version>');
+      expect(updated).toContain('<version>${jackson.version}</version>');
     });
 
     const pomVersionAfterParentAndDepMgmt = `<project xmlns="http://maven.apache.org/POM/4.0.0">
