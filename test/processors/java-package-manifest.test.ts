@@ -246,7 +246,7 @@ describe('JavaPackageManifest', () => {
       <dependency>
         <groupId>net.java.dev.jna</groupId>
         <artifactId>jna-platform</artifactId>
-        <version>5.12.0</version>
+        <version>${jna-platform.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
