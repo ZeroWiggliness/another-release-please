@@ -7,24 +7,26 @@
     "maxCommits": 100,
     "includeChores": false
   },
-  "version": "v0.1.0",
+  "version": "v0.1.1",
   "versionPrefix": "v",
   "manifests": [
     {
       "path": ".",
       "type": "node",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "path": ".",
       "type": "custom",
-      "version": "0.1.0",
+      "version": "v0.1.1",
       "versionPrefix": "v",
       "files": [
         {
           "path": "README.md",
           "filetype": "text",
-          "versionPatterns": ["https://img\\.shields\\.io/badge/version-([^-]+)-blue"]
+          "versionPatterns": [
+            "https://img\\.shields\\.io/badge/version-([^-]+)-blue"
+          ]
         }
       ]
     }
