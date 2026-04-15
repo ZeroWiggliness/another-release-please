@@ -282,6 +282,24 @@ describe('ManifestProcessor.generateFileOperations', () => {
       expect(files.find(f => f.path === 'version.txt')?.content).toBe('2.0.0\n');
     });
 
+    it('strips versionPrefix from nextVersion before applying to file content', async () => {
+      const content = '<a href="https://github.com/owner/repo/releases"><img src="https://img.shields.io/badge/version-0.1.0-blue"></a>\n';
+      const config = makeConfigWithFiles({ 'README.md': content });
+      const processor = new ManifestProcessor([], config);
+      const { ProcessedManifest: PM } = await import('../../src/processors/types');
+      const processedManifest = new PM('.', '0.1.0', [
+        { path: 'README.md', filetype: 'text', versionPatterns: ['(https://img\\.shields\\.io/badge/version-)[^-]+(-blue)'] },
+      ], 'v');
+
+      const files: FileOperation[] = [{ path: 'README.md', content, status: 'updated' }];
+      // nextVersion includes the "v" prefix — it must be stripped before inserting into the badge URL
+      await processor.generateFileOperations(processedManifest, ['README.md'], 'v0.1.1', files);
+
+      const updated = files.find(f => f.path === 'README.md')?.content ?? '';
+      expect(updated).toContain('https://img.shields.io/badge/version-0.1.1-blue');
+      expect(updated).not.toContain('version-v0.1.1-blue');
+    });
+
     it('only replaces the first match per pattern (no global replacement)', async () => {
       const content = '<version>1.0.0</version>\n<dependency><version>1.0.0</version></dependency>\n';
       const config = makeConfigWithFiles({ 'pom.xml': content });

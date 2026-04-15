@@ -105,6 +105,14 @@ export class ManifestProcessor {
   ): Promise<void> {
     logger.info(`   Generating file operations for manifest: ${processedManifest.path || '(root)'} → ${nextVersion}`);
 
+    // Strip the version prefix (e.g. "v") before applying to file content.
+    // The versionPrefix is used for git tags; file content patterns are authored
+    // against bare version strings (e.g. "0.1.1", not "v0.1.1").
+    const fileVersion =
+      processedManifest.versionPrefix && nextVersion.startsWith(processedManifest.versionPrefix)
+        ? nextVersion.slice(processedManifest.versionPrefix.length)
+        : nextVersion;
+
     for (const manifestFile of processedManifest.fileOperations) {
       const matchedFiles = repositoryFiles.filter(f => minimatch(f, manifestFile.path));
       logger.debug(`      Pattern '${manifestFile.path}' matched ${matchedFiles.length} file(s)`);
@@ -116,8 +124,8 @@ export class ManifestProcessor {
           // Note for documentation: In a typical use case, files that match glob patterns should already exist in the repository, so this block is primarily for handling explicitly configured literal paths that don't exist yet. For glob patterns, it's expected that at least one file will match and be read successfully; if not, a warning is logged and the pattern is skipped. Only when a literal path is configured and doesn't exist do we create new content based on the version.
           if (!/[*?[{]/.test(manifestFile.path)) {
             // Literal path — file doesn't exist yet; apply version to empty content
-            const created = this.applyVersion(manifestFile.filetype, '', manifestFile.versionPatterns, nextVersion);
-            const fileContent = created ?? nextVersion;
+            const created = this.applyVersion(manifestFile.filetype, '', manifestFile.versionPatterns, fileVersion);
+            const fileContent = created ?? fileVersion;
             const existing = files.find(f => f.path === filePath);
             if (existing) {
               existing.content = fileContent;
@@ -131,7 +139,7 @@ export class ManifestProcessor {
           continue;
         }
 
-        const updated = this.applyVersion(manifestFile.filetype, content, manifestFile.versionPatterns, nextVersion);
+        const updated = this.applyVersion(manifestFile.filetype, content, manifestFile.versionPatterns, fileVersion);
         if (updated === null) {
           logger.warn(`      No version pattern matched in '${filePath}' — skipping`);
           continue;
