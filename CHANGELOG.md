@@ -1,3 +1,11 @@
+## v0.1.2
+
+### Bug Fixes
+* java regex changed ([#9](https://github.com/ZeroWiggliness/another-release-please/issues/9)) ([cc53081](https://github.com/ZeroWiggliness/another-release-please/commit/cc53081e1542fcb2769b05283baa6ac382590c26))
+
+---
+_Generated on 2026-04-15_
+
 ## v0.1.1
 
 ### Bug Fixes

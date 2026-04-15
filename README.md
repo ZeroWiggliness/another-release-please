@@ -1,4 +1,4 @@
-[![Version](https://img.shields.io/badge/version-v0.1.1-blue)](https://github.com/ZeroWiggliness/another-release-please/releases)
+[![Version](https://img.shields.io/badge/version-v0.1.2-blue)](https://github.com/ZeroWiggliness/another-release-please/releases)
 
 # another-release-please
 
