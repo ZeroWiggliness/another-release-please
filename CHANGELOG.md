@@ -1,3 +1,11 @@
+## v0.1.3
+
+### Bug Fixes
+* add Gradle package manifest support and related tests ([#12](https://github.com/ZeroWiggliness/another-release-please/issues/12)) ([6176a93](https://github.com/ZeroWiggliness/another-release-please/commit/6176a93a0021be56c1727e33e7374b4f477f9ccb))
+
+---
+_Generated on 2026-04-22_
+
 ## v0.1.2
 
 ### Bug Fixes
