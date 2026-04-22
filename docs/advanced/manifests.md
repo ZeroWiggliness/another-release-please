@@ -44,6 +44,7 @@ The shared fields are:
 | `simple` | `version.txt` | [../package-manifests/simple.md](../package-manifests/simple.md) |
 | `node` | `package.json` | [../package-manifests/node.md](../package-manifests/node.md) |
 | `java` | `pom.xml` | [../package-manifests/java.md](../package-manifests/java.md) |
+| `gradle` | `gradle.properties`, `build.gradle`, `build.gradle.kts` | [../package-manifests/gradle.md](../package-manifests/gradle.md) |
 | `helm` | `Chart.yaml` | [../package-manifests/helm.md](../package-manifests/helm.md) |
 | `csharp` | `*.csproj` | [../package-manifests/csharp.md](../package-manifests/csharp.md) |
 | `custom` | Explicit file list | [../package-manifests/custom.md](../package-manifests/custom.md) |

@@ -11,6 +11,7 @@ import { JavaPackageManifest } from './manifests/java-package-manifest.js';
 import { CSharpPackageManifest } from './manifests/csharp-package-manifest.js';
 import { HelmPackageManifest } from './manifests/helm-package-manifest.js';
 import { CustomPackageManifest } from './manifests/custom-package-manifest.js';
+import { GradlePackageManifest } from './manifests/gradle-package-manifest.js';
 
 /**
  * Type for package manifest constructor
@@ -56,3 +57,4 @@ registerManifestType('java', JavaPackageManifest);
 registerManifestType('csharp', CSharpPackageManifest);
 registerManifestType('helm', HelmPackageManifest);
 registerManifestType('custom', CustomPackageManifest);
+registerManifestType('gradle', GradlePackageManifest);

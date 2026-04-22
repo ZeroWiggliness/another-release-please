@@ -17,5 +17,6 @@ export { HelmPackageManifest } from './manifests/helm-package-manifest.js';
 export { CustomPackageManifest } from './manifests/custom-package-manifest.js';
 export { CSharpPackageManifest } from './manifests/csharp-package-manifest.js';
 export { NodePackageManifest } from './manifests/node-package-manifest.js';
+export { GradlePackageManifest } from './manifests/gradle-package-manifest.js';
 
 
