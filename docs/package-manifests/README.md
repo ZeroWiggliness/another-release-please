@@ -1,6 +1,6 @@
 # Package Manifest Reference
 
-another-release-please ships six built-in package manifest processors. Each one turns a logical manifest entry into one or more concrete file operations.
+another-release-please ships seven built-in package manifest processors. Each one turns a logical manifest entry into one or more concrete file operations.
 
 ## Built-In Processors
 
@@ -9,6 +9,7 @@ another-release-please ships six built-in package manifest processors. Each one 
 | `simple` | `version.txt` | `prerelease` | [simple.md](simple.md) |
 | `node` | `package.json` | `prerelease` | [node.md](node.md) |
 | `java` | `**/pom.xml` | `SNAPSHOT` | [java.md](java.md) |
+| `gradle` | `gradle.properties`, `**/build.gradle`, `**/build.gradle.kts` | `SNAPSHOT` | [gradle.md](gradle.md) |
 | `helm` | `**/Chart.yaml` | `prerelease` | [helm.md](helm.md) |
 | `csharp` | `**/*.csproj` | `alpha` | [csharp.md](csharp.md) |
 | `custom` | explicit `files` list | `prerelease` | [custom.md](custom.md) |
