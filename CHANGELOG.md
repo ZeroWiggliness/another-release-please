@@ -1,3 +1,11 @@
+## v0.1.4
+
+### Bug Fixes
+* Allow multiple matches in manifest, addtional logging. ([#21](https://github.com/ZeroWiggliness/another-release-please/issues/21)) ([66e5ffb](https://github.com/ZeroWiggliness/another-release-please/commit/66e5ffb076cb12286265154875e209e42d2408d5))
+
+---
+_Generated on 2026-07-23_
+
 ## v0.1.3
 
 ### Bug Fixes
