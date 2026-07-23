@@ -21,6 +21,8 @@ export interface ManifestFile {
   filetype: ManifestFileType;
   /** Regex patterns used to find and replace the version string inside the matched file */
   versionPatterns: string[];
+  /** When true, replace all matches in the file; when false (default), only replace the first match per pattern */
+  replaceAll?: boolean;
 }
 
 // ---------------------------------------------------------------------------
