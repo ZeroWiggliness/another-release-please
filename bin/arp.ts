@@ -200,6 +200,12 @@ async function main(): Promise<void> {
       registerManifestType('csharp', CSharpPackageManifest);
       registerManifestType('node', NodePackageManifest);
 
+      // log the configuration for debugging purposes
+      if (config.debug) {
+        logger.debug('🐛 Configuration detected:');
+        logger.debug(JSON.stringify(config, null, 2));
+      }
+
       const result = await COMMANDS[command](commandArgs, config);
 
       if (typeof result !== 'undefined') {

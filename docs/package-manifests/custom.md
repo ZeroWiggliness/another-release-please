@@ -141,6 +141,46 @@ Each file entry contains:
 }
 ```
 
+### Updating All Version References In A README
+
+When a version appears in multiple places within a README (e.g., installation instructions, usage examples), use `replaceAll: true` to update all occurrences:
+
+```json
+{
+  "path": "docs/cli-tool",
+  "version": "1.5.0",
+  "type": "custom",
+  "files": [
+    {
+      "path": "README.md",
+      "filetype": "text",
+      "versionPatterns": ["1\\.5\\.0"],
+      "replaceAll": true
+    }
+  ]
+}
+```
+
+For example, this configuration would update a README containing:
+```
+# CLI Tool
+
+Current version: 1.5.0
+
+## Installation
+
+Install version 1.5.0 with:
+$ npm install cli-tool@1.5.0
+
+## Usage
+
+This tool (version 1.5.0) provides the following commands:
+```
+
+All three instances of `1.5.0` would be replaced with the new version (e.g., `1.6.0`).
+
+> **Note:** Without `replaceAll` (or when it's `false`), only the first match per pattern is replaced. This is the default behavior to avoid accidentally updating dependency versions in files like `pom.xml`.
+
 ## Caveats
 
 - keep file paths relative to the repository root, not the manifest path
