@@ -705,6 +705,7 @@ export class GitHubProvider implements GitProvider {
       startBranch: targetBranch,
       message: title,
       files: files.map(f => ({ path: f.path, content: f.content })),
+      force: true,
     });
 
     // Step 4: Create the pull request
