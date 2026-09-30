@@ -1,3 +1,11 @@
+## v0.1.5
+
+### Bug Fixes
+* *(deps)* bump semver from 7.7.4 to 7.8.5 ([#25](https://github.com/ZeroWiggliness/another-release-please/issues/25)) ([bd8d030](https://github.com/ZeroWiggliness/another-release-please/commit/bd8d0308eea48f5ef0c2550279e2b4675b2be792))
+
+---
+_Generated on 2026-09-30_
+
 ## v0.1.4
 
 ### Bug Fixes
