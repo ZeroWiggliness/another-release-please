@@ -116,7 +116,7 @@ export class ManifestProcessor {
           // Note for documentation: In a typical use case, files that match glob patterns should already exist in the repository, so this block is primarily for handling explicitly configured literal paths that don't exist yet. For glob patterns, it's expected that at least one file will match and be read successfully; if not, a warning is logged and the pattern is skipped. Only when a literal path is configured and doesn't exist do we create new content based on the version.
           if (!/[*?[{]/.test(manifestFile.path)) {
             // Literal path — file doesn't exist yet; apply version to empty content
-            const created = this.applyVersion(manifestFile.filetype, '', manifestFile.versionPatterns, nextVersion);
+            const created = this.applyVersion(manifestFile.filetype, '', manifestFile.versionPatterns, nextVersion, manifestFile.replaceAll);
             const fileContent = created ?? nextVersion;
             const existing = files.find(f => f.path === filePath);
             if (existing) {
@@ -131,7 +131,7 @@ export class ManifestProcessor {
           continue;
         }
 
-        const updated = this.applyVersion(manifestFile.filetype, content, manifestFile.versionPatterns, nextVersion);
+        const updated = this.applyVersion(manifestFile.filetype, content, manifestFile.versionPatterns, nextVersion, manifestFile.replaceAll);
         if (updated === null) {
           logger.warn(`      No version pattern matched in '${filePath}' — skipping`);
           continue;
@@ -148,22 +148,23 @@ export class ManifestProcessor {
     }
   }
 
-  private applyVersion(filetype: ManifestFileType, content: string, patterns: string[], newVersion: string): string | null {
+  private applyVersion(filetype: ManifestFileType, content: string, patterns: string[], newVersion: string, replaceAll?: boolean): string | null {
     switch (filetype) {
       case 'yaml': return this.applyVersionYaml(content, patterns, newVersion);
       case 'json': return this.applyVersionJson(content, patterns, newVersion);
       case 'xml':
       case 'text':
-      default: return this.applyVersionText(content, patterns, newVersion);
+      default: return this.applyVersionText(content, patterns, newVersion, replaceAll);
     }
   }
 
   /**
    * Replace the version value in each regex pattern with newVersion.
-   * Only replaces the first match per pattern (no `g` flag) to avoid
-   * clobbering dependency version entries (e.g. in pom.xml).
+   * By default, only replaces the first match per pattern (no `g` flag) to avoid
+   * clobbering dependency version entries (e.g. in pom.xml). Set replaceAll to true
+   * to replace all occurrences.
    *
-   * Two calling conventions are supported:
+   * Three calling conventions are supported:
    *  - Zero capture groups: the entire match is replaced with newVersion.
    *  - One capture group: group1 is the version value; the first occurrence of
    *    group1 within the match is replaced.  Works correctly when the version
@@ -174,19 +175,29 @@ export class ManifestProcessor {
    *    whether the version value appears elsewhere in the surrounding context
    *    (e.g. inside a Maven <parent> block that has the same version).
    */
-  private applyVersionText(content: string, patterns: string[], newVersion: string): string {
+  private applyVersionText(content: string, patterns: string[], newVersion: string, replaceAll = false): string {
     let result = content;
     for (const pattern of patterns) {
-      const re = new RegExp(pattern);
-      result = result.replace(re, (match, group1, group2) => {
-        if (group1 === undefined) {
+      // Add 'g' flag if replaceAll is true to replace all occurrences
+      const flags = replaceAll ? 'g' : '';
+      const re = new RegExp(pattern, flags);
+      result = result.replace(re, (match, ...args) => {
+        // When using replace() with a callback, arguments are:
+        // match, [capture groups], offset, string
+        // We need to remove the last two (offset and string) to get just capture groups
+        const captureGroups = args.slice(0, -2);
+        const group1 = captureGroups[0];
+        const group2 = captureGroups[1];
+
+        if (captureGroups.length === 0) {
           // Pattern has no capture group — replace entire match
           return newVersion;
         }
-        if (typeof group2 === 'string') {
+        if (captureGroups.length >= 2) {
           // Two-group pattern: group1 is prefix, group2 is suffix
           return group1 + newVersion + group2;
         }
+        // One capture group — replace the captured value
         return match.replace(group1, newVersion);
       });
     }

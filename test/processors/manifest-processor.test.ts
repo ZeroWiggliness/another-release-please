@@ -302,6 +302,41 @@ describe('ManifestProcessor.generateFileOperations', () => {
       const secondPos = updated.indexOf('<version>2.0.0</version>', firstPos + 1);
       expect(secondPos).toBe(-1);
     });
+
+    it('replaces all matches in readme when replaceAll is true', async () => {
+      const readmeContent = `# My Project
+
+Version: 1.2.3
+
+## Installation
+
+This project requires version 1.2.3 to be installed.
+
+## Usage
+
+The current version is 1.2.3 and includes the following features:
+`;
+      const config = makeConfigWithFiles({ 'README.md': readmeContent });
+      const processor = new ManifestProcessor([], config);
+      const { ProcessedManifest: PM } = await import('../../src/processors/types');
+      const processedManifest = new PM('.', '1.2.3', [
+        { path: 'README.md', filetype: 'text', versionPatterns: ['1\\.2\\.3'], replaceAll: true },
+      ], 'v');
+
+      const files: FileOperation[] = [{ path: 'README.md', content: readmeContent, status: 'updated' }];
+      await processor.generateFileOperations(processedManifest, ['README.md'], '2.0.0', files);
+
+      const updated = files.find(f => f.path === 'README.md')?.content ?? '';
+      // All three occurrences should be replaced
+      const count = (updated.match(/2\.0\.0/g) || []).length;
+      expect(count).toBe(3);
+      // Original version should not appear
+      expect(updated).not.toContain('1.2.3');
+      // Verify specific replacements
+      expect(updated).toContain('Version: 2.0.0');
+      expect(updated).toContain('version 2.0.0 to be installed');
+      expect(updated).toContain('version is 2.0.0 and includes');
+    });
   });
 
   describe('yaml filetype', () => {
