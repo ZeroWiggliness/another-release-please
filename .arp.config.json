@@ -7,18 +7,18 @@
     "maxCommits": 100,
     "includeChores": false
   },
-  "version": "v0.1.5",
+  "version": "v0.1.6",
   "versionPrefix": "v",
   "manifests": [
     {
       "path": ".",
       "type": "node",
-      "version": "0.1.5"
+      "version": "0.1.6"
     },
     {
       "path": ".",
       "type": "custom",
-      "version": "v0.1.5",
+      "version": "v0.1.6",
       "versionPrefix": "v",
       "files": [
         {
