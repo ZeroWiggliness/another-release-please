@@ -1,3 +1,15 @@
+## v0.2.0
+
+### Features
+* better changelog formating ([28e3fc3](https://github.com/ZeroWiggliness/another-release-please/commit/28e3fc3b04092e49cf6a6437768f8b5d40a0ea06))
+
+### Bug Fixes
+* *(deps)* bump simple-git from 3.36.0 to 4.0.2 ([#31](https://github.com/ZeroWiggliness/another-release-please/issues/31)) ([c6a882e](https://github.com/ZeroWiggliness/another-release-please/commit/c6a882e41900693fbcd628e69a7d809a74a8143f))
+* *(deps)* bump yaml from 2.8.3 to 2.9.1 ([#32](https://github.com/ZeroWiggliness/another-release-please/issues/32)) ([e9b131f](https://github.com/ZeroWiggliness/another-release-please/commit/e9b131f3be2d3483031447e25e87fdb74d257b6f))
+
+---
+_Generated on 2026-11-15_
+
 ## v0.1.5
 
 ### Bug Fixes
