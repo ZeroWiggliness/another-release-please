@@ -4,6 +4,8 @@ import type { Commit } from '../types/provider.js';
  * Repository context used by changelog writers to generate links.
  */
 export interface ChangelogRepoContext {
+  /** Include Markdown body descriptions beneath entry bullets. Defaults to false. */
+  includeDescription?: boolean;
   /** Repository web URL (e.g. https://github.com/owner/repo). Used to generate commit hash links. */
   repoUrl?: string;
   /** Path prefix for commit URLs (e.g. '/commit' or '/-/commit'). */

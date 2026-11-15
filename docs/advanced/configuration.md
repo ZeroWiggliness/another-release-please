@@ -23,11 +23,13 @@ another-release-please loads configuration from four sources, in this order:
     "maxReleases": 10,
     "maxCommits": 100,
     "includeChores": false,
+    "alwaysCreatePr": false,
     "skipTag": false,
     "skipRelease": false,
     "skipPrCreation": false
   },
   "versionPrefix": "v",
+  "includeDescription": false,
   "useFileSystem": true,
   "updateAllVersions": false,
   "manifests": [
@@ -51,6 +53,7 @@ another-release-please loads configuration from four sources, in this order:
 | `maxReleases` | Number of releases to inspect while discovering the current version | None |
 | `maxCommits` | Number of commits to inspect while calculating changes | None |
 | `includeChores` | Include `chore:` commits in eligibility | `--include-chores` |
+| `alwaysCreatePr` | Always create/update a release PR, using a patch bump when no release is otherwise triggered. Defaults to `false`; affects only `release-pr`. | None |
 | `skipTag` | Skip provider tag creation in `release` | `--skip-tag` |
 | `skipRelease` | Skip provider release creation in `release` | `--skip-release` |
 | `skipPrCreation` | Skip provider PR or MR creation and updates in `release-pr` | `--skip-pr-creation` |
@@ -76,6 +79,36 @@ another-release-please loads configuration from four sources, in this order:
 | `updateAllVersions` | `--update-all-versions` | Bumps every manifest regardless of changed paths |
 | `issueUrlTemplate` | `--issue-url-template` | Template for issue references |
 | `versionPrefix` | `--version-prefix` | Prefix used for tag discovery and release tags |
+
+## Changelog Descriptions
+
+`includeDescription` is a **top-level**, config-only boolean. It defaults to
+`false`. When `true`, each entry's Markdown body is rendered beneath its bullet
+in the changelog and PR/MR body, and subsequently in release notes. It does not
+change version calculation or enable/disable multiple-entry parsing.
+
+```json
+{
+  "version": "1.0.0",
+  "includeDescription": true,
+  "release": {
+    "targetBranch": "main",
+    "prerelease": false
+  },
+  "manifests": [
+    { "path": ".", "type": "node", "version": "1.0.0" }
+  ]
+}
+```
+
+Omit it or use `false` to keep bullet-only output. Strings such as `"true"`,
+numbers, and `null` are rejected. There is no CLI flag, environment variable, or
+per-manifest override. Metadata trailers are excluded from descriptions;
+breaking notes remain in their dedicated section.
+
+See [changelog.md](changelog.md) for paired configuration, commit-message, and
+output examples, including descriptions on/off, multiple entries, lists, code,
+breaking changes, and provider links.
 
 ## Config-Only Notes
 

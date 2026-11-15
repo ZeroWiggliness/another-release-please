@@ -17,6 +17,7 @@ This section covers the branch strategies, automation patterns, and configuratio
 | Page | Focus |
 | --- | --- |
 | [configuration.md](configuration.md) | `.arp.config.json`, precedence, and release settings |
+| [changelog.md](changelog.md) | Writing multiple changelog entries and opt-in descriptions, with worked examples |
 | [manifests.md](manifests.md) | What manifests are and how they are selected |
 
 Use these pages once the basic PR-based release loop is already working.

@@ -1,5 +1,6 @@
 import Handlebars from 'handlebars';
 import type { Commit } from '../types/provider.js';
+import { parseCommit } from '../helpers/commit-parser.js';
 import { ChangelogWriter, type ChangelogRepoContext } from './changelog-writer.js';
 
 /**
@@ -46,7 +47,8 @@ const SECTION_ORDER = [
 const COMMIT_PARTIAL =
   `* {{#if scope}}*({{scope}})* {{/if}}{{linkIssues subject}}` +
   `{{#if refs}} — {{#each refs}}{{action}} [{{displayId}}]({{url}}){{#unless @last}}, {{/unless}}{{/each}}{{/if}}` +
-  `{{#if commitUrl}} ([{{shortHash}}]({{commitUrl}})){{/if}}\n`;
+  `{{#if commitUrl}} ([{{shortHash}}]({{commitUrl}})){{/if}}\n` +
+  `{{#if description}}{{{description}}}\n{{/if}}`;
 
 /**
  * Main Handlebars template for the full changelog section.
@@ -60,7 +62,7 @@ const COMMIT_PARTIAL =
 const MAIN_TEMPLATE =
   `## {{{version}}}\n` +
   `{{#if hasBreaking}}` +
-  `\n### ⚠ BREAKING CHANGES\n\n` +
+  `\n\n### ⚠ BREAKING CHANGES\n\n` +
   `{{#each breakingChanges}}* {{{text}}}{{#if commitUrl}} ([{{shortHash}}]({{commitUrl}})){{/if}}\n{{/each}}` +
   `{{/if}}` +
   `{{#each sections}}` +
@@ -79,6 +81,7 @@ interface RefView {
 
 interface CommitView {
   subject: string;
+  description?: string;
   scope?: string;
   refs?: RefView[];
   shortHash?: string;
@@ -154,18 +157,15 @@ export class HandlebarsChangelogWriter extends ChangelogWriter {
     const typeBuckets = new Map<string, Map<string | null, CommitView[]>>();
 
     for (const commit of commits) {
-      const match = commit.title.match(/^(\w+)(?:\(([^)]+)\))?(!)?:\s*(.+)$/);
-      if (!match) continue;
+      const parsed = parseCommit(commit);
+      if (!parsed) continue;
+      const { type, subject } = parsed;
+      const scope = parsed.scope ?? null;
 
-      const type = match[1];
-      const scope = match[2] ?? null;
-      const breaking = !!match[3];
-      const subject = match[4];
-      const bcFooterMatch = /^BREAKING CHANGE:\s*(.+)$/m.exec(commit.message || '');
-
-      if (breaking || bcFooterMatch) {
-        const bcText = bcFooterMatch ? bcFooterMatch[1] : subject;
-        const bcEntry: { text: string; shortHash?: string; commitUrl?: string } = { text: bcText };
+      for (const text of parsed.breakingNotes.length ? parsed.breakingNotes : parsed.breaking ? [subject] : []) {
+        const bcEntry: { text: string; shortHash?: string; commitUrl?: string } = {
+          text: text.replace(/\n(?!$)/g, '\n  '),
+        };
         if (context.repoUrl && context.commitPath && commit.sha) {
           bcEntry.commitUrl = `${context.repoUrl}${context.commitPath}/${commit.sha}`;
           bcEntry.shortHash = commit.sha.substring(0, 7);
@@ -177,13 +177,7 @@ export class HandlebarsChangelogWriter extends ChangelogWriter {
       if (!sectionTitle) continue;
 
       // Extract git-trailer style refs from the commit body
-      const rawRefs: { action: string; id: string }[] = [];
-      const fullMessage = commit.message || commit.title;
-      const refRe = /^(refs?|fixes?|closes?|resolves?):\s*#?(\S+)/gim;
-      let refMatch: RegExpExecArray | null;
-      while ((refMatch = refRe.exec(fullMessage)) !== null) {
-        rawRefs.push({ action: refMatch[1].toLowerCase(), id: refMatch[2] });
-      }
+      const rawRefs = parsed.references;
 
       // Render footer refs as hyperlinks
       let refs: RefView[] | undefined;
@@ -205,6 +199,9 @@ export class HandlebarsChangelogWriter extends ChangelogWriter {
 
       const commitView: CommitView = {
         subject,
+        description: context.includeDescription && parsed.description
+          ? '\n' + parsed.description.split('\n').map(line => line ? `  ${line}` : '').join('\n')
+          : undefined,
         scope: scope ?? undefined,
         refs,
         shortHash,

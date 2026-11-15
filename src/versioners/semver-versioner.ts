@@ -5,6 +5,7 @@
 import semver from 'semver';
 import type { Versioner, VersionBumpLevel } from '../interfaces/versioner.interface.js';
 import { Version } from './version.js';
+import { parseCommit } from '../helpers/commit-parser.js';
 
 /**
  * Semantic versioning (semver) implementation
@@ -102,9 +103,10 @@ export class SemverVersioner implements Versioner {
     else {
       for (const commit of commits) {
         const title = commit.title || '';
+        const parsed = parseCommit(commit);
 
         // Breaking changes: any type with ! or BREAKING CHANGE: in message footer
-        if (/^\w+(?:\([^)]+\))?!:/.test(title) || /^BREAKING CHANGE:/m.test(commit.message || '')) {
+        if (parsed?.breaking) {
           priority = 3;
           break;
         }
@@ -126,9 +128,8 @@ export class SemverVersioner implements Versioner {
           priority = Math.max(priority, 0);
 
           // Set forceVersion if we have a chore with a version in the message body like Release-As: v1.2.3 (similar to how we do it for PR labels) - this allows us to support chore-only releases and manually forcing versions when needed
-          const releaseAsMatch = /Release-As:\s*(\S+)/i.exec(commit.message || '');
-          if (releaseAsMatch) {
-            forceVersion = releaseAsMatch[1].trim();
+          if (parsed?.releaseAs) {
+            forceVersion = parsed.releaseAs;
           }
 
           continue;
