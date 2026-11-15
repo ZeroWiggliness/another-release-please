@@ -7,6 +7,7 @@ another-release-please is a release automation CLI for GitHub and GitLab reposit
 ## Features
 
 - Create or update a release PR or MR from conventional commits
+- Generate multiple changelog entries from one commit, with opt-in Markdown descriptions beneath each bullet
 - Calculate the next version and update files without opening a PR
 - Create provider tags and releases after the autorelease PR or MR is merged
 - Support GitHub and GitLab providers from the same CLI
@@ -58,6 +59,25 @@ If you are migrating an existing project you can set the versions to the existin
 
 For other project types, see the manifest documentation.
 
+## Writing Changelog Entries
+
+Use additional conventional headers in the final commit message for multiple entries:
+
+```text
+feat: add search
+
+Search all records.
+
+fix: handle empty input
+
+Return an empty result.
+```
+
+Descriptions are hidden by default. To show them beneath their corresponding
+bullets, set top-level `"includeDescription": true` in `.arp.config.json`.
+See the [changelog guide](docs/advanced/changelog.md) for twelve worked example
+categories covering output, Markdown formatting, breaking notes, and GitHub/GitLab links.
+
 ## General flow
 
 On your default branch (or hotfix/maintenance branches), two commands need to be run:
@@ -65,6 +85,13 @@ On your default branch (or hotfix/maintenance branches), two commands need to be
 **release** – Typically used to check if a merge request can be converted into a release. Tags the branch with the version. Returns information about the release created, current versions, etc., as JSON.
 
 **release-pr** – Creates a Pull Request if conventional commits since the last release are detected on the target (default or hotfix/maintenance) branch. Can be directed to create PRs targeting other branches for use in GitFlow-style releases. Returns a JSON object of current and next version numbers.
+
+Set `"alwaysCreatePr": true` inside the `release` config block to always create or
+update the release PR, including for chores, non-conventional commits, or no new
+commits. It defaults to `false` and uses a patch bump when no commit triggers a
+release; feature and breaking-change bumps still take precedence. Dry-run and
+`skipPrCreation` still prevent writes. This config-only setting affects `release-pr`,
+not `calculate-next`.
 
 **NOTE:** Do NOT run **release-pr** on non-target branches. It may pick up commits that cause it to create new PRs.
 

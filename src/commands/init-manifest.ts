@@ -68,6 +68,7 @@ function buildOutput(config: AppConfig): InitManifestReturn {
     includeChores: r.includeChores ?? false,
   };
   if (r.draft) release.draft = r.draft;
+  if (r.alwaysCreatePr) release.alwaysCreatePr = true;
 
   // Convert hydrated Manifest[] back to ManifestItemSchema[], omitting type when it is the default
   const manifests: ManifestItemSchema[] = config.manifests.map(m => {

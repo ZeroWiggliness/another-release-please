@@ -30,6 +30,7 @@ This documentation is organized around the release lifecycle: getting the tool r
 | [advanced/gitlab-ci.md](advanced/gitlab-ci.md) | GitLab CI/CD pipeline design using the shipped example |
 | [advanced/maintenance-hotfixes.md](advanced/maintenance-hotfixes.md) | Maintenance and hotfix branch patterns |
 | [advanced/configuration.md](advanced/configuration.md) | `.arp.config.json`, precedence rules, and config-only settings |
+| [advanced/changelog.md](advanced/changelog.md) | Multiple entries, optional Markdown descriptions, and twelve worked example categories |
 | [advanced/manifests.md](advanced/manifests.md) | What manifests are and how manifest selection works |
 
 ## Package Manifests

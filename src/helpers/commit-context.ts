@@ -9,80 +9,28 @@ import type { AppConfig } from '../config/config-types.js';
 import type { Commit, Tag } from '../types/provider.js';
 import { reduceTagsOnBranchToLatest, reduceCommitsToConventionalSinceLastRelease } from './index.js';
 import * as logger from '../logger.js';
-
-const CONVENTIONAL_COMMIT_LINE_REGEX = /^(\w+)(?:\(([^)]+)\))?(!)?:\s*(.+)$/;
-const BREAKING_CHANGE_LINE_REGEX = /^BREAKING CHANGE:\s*(.+)$/;
+import { parseCommitMessage } from './commit-parser.js';
 
 /**
- * Expands each commit whose message contains multiple conventional-commit lines
- * into one synthetic commit per line.
- *
- * For every commit:
- *  1. Split the full message into non-empty lines.
- *  2. If the first line does not match conventional-commit syntax, skip expansion
- *     and pass the commit through unchanged.
- *  3. If the last line matches `BREAKING CHANGE:` capture the text and remove it.
- *     A `BREAKING CHANGE:` line anywhere else logs a warning and is ignored.
- *  3. Keep only lines that match conventional-commit syntax.
- *  4. If no conventional lines are found the original commit is passed through unchanged.
- *  5. Otherwise one new commit is produced per conventional line:
- *     - Tags are preserved only on the first commit.
- *     - The first commit's message has the breaking-change text appended.
+ * Expand conventional messages while retaining each entry's body and footers.
+ * Tags stay on the first entry; all entries retain the original commit identity.
  */
 export async function expandCommits(commits: Commit[]): Promise<Commit[]> {
   const result: Commit[] = [];
 
   for (const commit of commits) {
-    const rawLines = commit.message.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-
-    // If the first line is not a conventional commit, pass through as-is
-    if (rawLines.length === 0 || !CONVENTIONAL_COMMIT_LINE_REGEX.test(rawLines[0])) {
+    const entries = parseCommitMessage(commit.message);
+    if (entries.length === 0) {
       result.push(commit);
       continue;
     }
 
-    let breakingText: string | undefined;
-    const candidateLines: string[] = [];
-
-    // Check only the last line for BREAKING CHANGE:
-    const lastLine = rawLines[rawLines.length - 1];
-    const bcLastMatch = lastLine ? BREAKING_CHANGE_LINE_REGEX.exec(lastLine) : null;
-    const linesToProcess = bcLastMatch ? rawLines.slice(0, -1) : rawLines;
-    if (bcLastMatch) {
-      breakingText = bcLastMatch[0];
-    }
-
-    for (const line of linesToProcess) {
-      if (BREAKING_CHANGE_LINE_REGEX.test(line)) {
-        logger.warn(`BREAKING CHANGE: found in non-last position in commit ${commit.sha.substring(0, 8)} — ignored`);
-      } else {
-        candidateLines.push(line);
-      }
-    }
-
-    const conventionalLines = candidateLines.filter(l => CONVENTIONAL_COMMIT_LINE_REGEX.test(l));
-
-    if (conventionalLines.length === 0) {
-      logger.debug(`No conventional commit lines found in commit ${commit.sha.substring(0, 8)} — passing through unchanged`);
-      result.push(commit);
-      continue;
-    }
-
-    const breakingSuffix = breakingText !== undefined
-      ? '\n\n' + breakingText
-      : '';
-
-    for (let i = 0; i < conventionalLines.length; i++) {
-      const line = conventionalLines[i];
+    for (let i = 0; i < entries.length; i++) {
       result.push({
-        sha: commit.sha,
+        ...commit,
         tags: i === 0 ? commit.tags : [],
-        title: line,
-        message: i === 0 ? line + breakingSuffix : line,
-        author: commit.author,
-        date: commit.date,
-        files: commit.files,
-        branch: commit.branch,
+        title: entries[i].title,
+        message: entries[i].message,
       });
     }
   }
@@ -105,11 +53,10 @@ export interface CommitContext {
  * fetches repo info, tags, commits, determines the version tag anchor, filters
  * conventional commits since the last release, and calculates the next version.
  *
- * Always returns a CommitContext. When there are no conventional commits,
- * `conventionalCommits` will be empty and `nextVersion`/`baseVersion` will be
- * empty strings — callers should treat this as a no-op / early exit.
+ * Always returns a CommitContext with resolved versions. includeAllCommits retains
+ * all commits since the release anchor for forced release PRs.
  */
-export async function resolveCommitContext(config: AppConfig): Promise<CommitContext> {
+export async function resolveCommitContext(config: AppConfig, includeAllCommits = false): Promise<CommitContext> {
   logger.info('📂 Fetching repository information...');
   const repo = await config.provider.getRepository();
   logger.info(`   Repository: ${repo.fullPath}`);
@@ -207,7 +154,7 @@ export async function resolveCommitContext(config: AppConfig): Promise<CommitCon
     }
   }
 
-  const conventionalCommits = reduceCommitsToConventionalSinceLastRelease(commits, lastVersionTag?.commit, config.release.includeChores ?? false, targetBranch);
+  const conventionalCommits = reduceCommitsToConventionalSinceLastRelease(commits, lastVersionTag?.commit, config.release.includeChores ?? false, targetBranch, includeAllCommits);
   logger.info(`   Found ${conventionalCommits.length} conventional commit(s) since last release`);
 
   const baseVersion = config.version ?? (lastVersionTag ? lastVersionTag.name : `${config.versionPrefix}0.1.0`);

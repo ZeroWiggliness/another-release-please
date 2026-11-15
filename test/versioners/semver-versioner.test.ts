@@ -1,9 +1,27 @@
 import { SemverVersioner } from '../../src/versioners/semver-versioner';
+import { expandCommits } from '../../src/helpers/commit-context';
 
 const makeCommit = (title: string, message = '') => ({ sha: 'abc', tags: [], message, title, author: { name: 'A', email: 'a@a.com' }, date: new Date(), files: [] });
 
 describe('SemverVersioner.calculateNextVersion', () => {
   const v = new SemverVersioner();
+
+  test.each(['BREAKING CHANGE', 'BREAKING-CHANGE'])('%s on an additional entry bumps major', async marker => {
+    const message = `fix: first\n\nFirst description.\n\nfeat(api): second\n\n${marker}: migrate clients\n\nUse the new endpoint.\nRefs: #42`;
+    const commits = await expandCommits([makeCommit('fix: first', message)]);
+    expect(v.calculateNextVersion(commits, '1.2.3', false).toString()).toBe('v2.0.0');
+  });
+
+  test('code examples do not trigger breaking or Release-As semantics', async () => {
+    const message = 'chore: examples\n\n```text\nBREAKING CHANGE: example\nRelease-As: 9.0.0\nfeat!: example\n```\n\n    BREAKING-CHANGE: indented example';
+    const commits = await expandCommits([makeCommit('chore: examples', message)]);
+    expect(v.calculateNextVersion(commits, '1.2.3', false, true).toString()).toBe('v1.2.4');
+  });
+
+  test('retained Release-As footer still forces chore releases after expansion', async () => {
+    const commits = await expandCommits([makeCommit('chore: release', 'chore: release\n\nRelease-As: 3.0.0')]);
+    expect(v.calculateNextVersion(commits, '1.2.3', false, true).toString()).toBe('v3.0.0');
+  });
 
   test('feat! -> major', () => {
     const next = v.calculateNextVersion([makeCommit('feat!: add new feature')], '1.2.3', false);

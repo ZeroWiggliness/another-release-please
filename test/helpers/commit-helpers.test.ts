@@ -3,6 +3,19 @@ import { reduceCommitsToConventionalSinceLastRelease } from '../../src/helpers/i
 const makeCommit = (sha: string, title: string, message = '', branch?: string) => ({ sha, tags: [], message, title, author: { name: 'A', email: 'a@a.com' }, date: new Date(), files: [], branch });
 
 describe('reduceCommitsToConventionalSinceLastRelease', () => {
+  test('includeAllCommits retains all target-branch commits but excludes the release anchor and older commits', () => {
+    const commits = [
+      makeCommit('a', 'Update readme', '', 'main'),
+      makeCommit('b', 'chore: update deps', '', 'main'),
+      makeCommit('c', 'feat!: unrelated branch', '', 'feature/other'),
+      makeCommit('tag', 'feat!: already released', '', 'main'),
+      makeCommit('old', 'fix: older', '', 'main'),
+    ];
+
+    const result = reduceCommitsToConventionalSinceLastRelease(commits, 'tag', false, 'main', true);
+    expect(result.map(commit => commit.sha)).toEqual(['a', 'b']);
+  });
+
   test('null sha returns all conventional commits', () => {
     const commits = [
       makeCommit('a', 'feat: add feature'),

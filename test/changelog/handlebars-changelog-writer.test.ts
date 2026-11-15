@@ -1,6 +1,7 @@
 import { HandlebarsChangelogWriter } from '../../src/changelog/handlebars-changelog-writer';
 import type { ChangelogRepoContext } from '../../src/changelog/changelog-writer';
 import type { Commit } from '../../src/types/provider';
+import { expandCommits } from '../../src/helpers/commit-context';
 
 /** Build a minimal Commit for testing */
 function makeCommit(title: string, message?: string, sha = 'abc1234567890'): Commit {
@@ -34,6 +35,67 @@ const writer = new HandlebarsChangelogWriter();
 // ---------------------------------------------------------------------------
 
 describe('HandlebarsChangelogWriter', () => {
+  describe('per-entry descriptions', () => {
+    const message = [
+      'feat(ui): add search', '', 'Find **anything** with `search()`.',
+      '', 'More at [the guide](https://example.com/guide).',
+      '', '- Fast', '  - Cached', '', 'Refs: #42', 'Reviewed-by: Reviewer', '',
+      'fix: handle empty input', '', 'Return an empty result.', '', 'Closes: #7',
+    ].join('\n');
+
+    it('renders exact nested Markdown and isolates descriptions and references', async () => {
+      const commits = await expandCommits([makeCommit('feat(ui): add search', message)]);
+      const output = await writer.generate(commits, 'v1.1.0', FIXED_DATE, makeContext({ includeDescription: true }));
+      expect(output).toBe([
+        '## v1.1.0', '', '### Features',
+        '* *(ui)* add search — refs [#42](https://gitlab.example.com/owner/repo/-/issues/42) ([abc1234](https://gitlab.example.com/owner/repo/-/commit/abc1234567890))',
+        '', '  Find **anything** with `search()`.',
+        '', '  More at [the guide](https://example.com/guide).',
+        '', '  - Fast', '    - Cached',
+        '', '### Bug Fixes',
+        '* handle empty input — closes [#7](https://gitlab.example.com/owner/repo/-/issues/7) ([abc1234](https://gitlab.example.com/owner/repo/-/commit/abc1234567890))',
+        '', '  Return an empty result.',
+        '', '---', '_Generated on 2026-04-02_',
+      ].join('\n'));
+    });
+
+    it.each([undefined, false])('omits descriptions when includeDescription is %s', async includeDescription => {
+      const commits = await expandCommits([makeCommit('feat(ui): add search', message)]);
+      const output = await writer.generate(commits, 'v1.1.0', FIXED_DATE, makeContext({ includeDescription }));
+      expect(output).toBe([
+        '## v1.1.0', '', '### Features',
+        '* *(ui)* add search — refs [#42](https://gitlab.example.com/owner/repo/-/issues/42) ([abc1234](https://gitlab.example.com/owner/repo/-/commit/abc1234567890))',
+        '', '### Bug Fixes',
+        '* handle empty input — closes [#7](https://gitlab.example.com/owner/repo/-/issues/7) ([abc1234](https://gitlab.example.com/owner/repo/-/commit/abc1234567890))',
+        '', '---', '_Generated on 2026-04-02_',
+      ].join('\n'));
+    });
+
+    it('preserves code verbatim without linking or escaping it', async () => {
+      const body = 'feat: examples\n\n~~~html\n<widget id="#42">&</widget>\nfeat!: not an entry\nBREAKING CHANGE: not a note\n~~~';
+      const commits = await expandCommits([makeCommit('feat: examples', body)]);
+      const output = await writer.generate(commits, 'v1.1.0', FIXED_DATE, makeContext({ includeDescription: true }));
+      expect(output).toContain('\n\n  ~~~html\n  <widget id="#42">&</widget>\n  feat!: not an entry\n  BREAKING CHANGE: not a note\n  ~~~\n');
+      expect(output).not.toContain('⚠ BREAKING CHANGES');
+    });
+
+    it('renders multiple multiline breaking notes separately from descriptions', async () => {
+      const body = [
+        'feat: update API', '', 'A useful improvement.', '',
+        'BREAKING CHANGE: remove v1', 'Use v2.', '', '- Update clients',
+        'Refs: #42', 'BREAKING-CHANGE: rename token', 'Use apiToken.',
+      ].join('\n');
+      const output = await writer.generate([makeCommit('feat: update API', body)], 'v2.0.0', FIXED_DATE, makeContext({ includeDescription: true }));
+      expect(output).toContain('* remove v1\n  Use v2.\n  \n  - Update clients ([abc1234]');
+      expect(output).toContain('* rename token\n  Use apiToken. ([abc1234]');
+      expect(output.slice(output.indexOf('### Features'))).toBe([
+        '### Features',
+        '* update API — refs [#42](https://gitlab.example.com/owner/repo/-/issues/42) ([abc1234](https://gitlab.example.com/owner/repo/-/commit/abc1234567890))',
+        '', '  A useful improvement.', '', '---', '_Generated on 2026-04-02_',
+      ].join('\n'));
+    });
+  });
+
   describe('version heading', () => {
     it('starts the output with ## version', async () => {
       const output = await writer.generate([makeCommit('feat: add search')], 'v1.2.3', FIXED_DATE, makeContext());
