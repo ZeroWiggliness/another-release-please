@@ -1,3 +1,11 @@
+## v0.2.1
+
+### Bug Fixes
+* enhance conventional commit handling with type suggestions ([#40](https://github.com/ZeroWiggliness/another-release-please/issues/40)) ([d5ca8f3](https://github.com/ZeroWiggliness/another-release-please/commit/d5ca8f3e1aed65c98a218018d19f0f9eb5501698))
+
+---
+_Generated on 2026-11-17_
+
 ## v0.2.0
 
 ### Features
