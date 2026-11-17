@@ -1,4 +1,13 @@
 import { reduceCommitsToConventionalSinceLastRelease } from '../../src/helpers/index.js';
+import * as logger from '../../src/logger.js';
+
+jest.mock('../../src/logger.js', () => ({
+  warn: jest.fn(),
+}));
+
+beforeEach(() => {
+  jest.mocked(logger.warn).mockClear();
+});
 
 const makeCommit = (sha: string, title: string, message = '', branch?: string) => ({ sha, tags: [], message, title, author: { name: 'A', email: 'a@a.com' }, date: new Date(), files: [], branch });
 
@@ -95,6 +104,30 @@ describe('reduceCommitsToConventionalSinceLastRelease', () => {
 
     const result = reduceCommitsToConventionalSinceLastRelease(commits, null, false);
     expect(result.map(c => c.title)).toEqual(['feat: conventional']);
+  });
+
+  test('ignores unknown conventional types and suggests a likely spelling correction', () => {
+    const commits = [
+      makeCommit('a', 'chrore: documentation improvements'),
+      makeCommit('b', 'fix: actual fix'),
+    ];
+
+    const result = reduceCommitsToConventionalSinceLastRelease(commits, null, false);
+
+    expect(result.map(c => c.title)).toEqual(['fix: actual fix']);
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('Ignoring commit "chrore: documentation improvements"'),
+    );
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('Did you mean "chore"?'));
+  });
+
+  test('warns for unknown conventional types without a close spelling match', () => {
+    const result = reduceCommitsToConventionalSinceLastRelease([
+      makeCommit('a', 'security: rotate credentials'),
+    ], null, false);
+
+    expect(result).toEqual([]);
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('non-conventional type "security"'));
   });
 
   test('order preserved (newest-first)', () => {

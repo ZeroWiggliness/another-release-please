@@ -1,7 +1,7 @@
 import type { Commit } from '../types/provider.js';
 
 const HEADER = /^(\w+)(?:\(([^)]+)\))?(!)?:[ \t]*(\S.*)$/;
-const ENTRY_TYPES = new Set(['feat', 'fix', 'perf', 'refactor', 'docs', 'test', 'build', 'ci', 'style', 'chore', 'revert']);
+export const CONVENTIONAL_COMMIT_TYPES = new Set(['feat', 'fix', 'perf', 'refactor', 'docs', 'test', 'build', 'ci', 'style', 'chore', 'revert']);
 const TRAILER = /^ {0,3}(BREAKING[ -]CHANGE|[A-Za-z][A-Za-z0-9-]*)(?::[ \t]*| #)(.*)$/;
 const REFERENCE = /^(refs?|fixes?|closes?|resolves?)$/i;
 
@@ -105,7 +105,7 @@ export function parseCommitMessage(message: string): ParsedCommitEntry[] {
   for (const line of lines.slice(1)) {
     const fenced = inFence(line);
     const header = fenced ? null : HEADER.exec(line);
-    if (header && ENTRY_TYPES.has(header[1])) {
+    if (header && CONVENTIONAL_COMMIT_TYPES.has(header[1])) {
       entries.push(parseEntry(current));
       current = [line];
     } else {
