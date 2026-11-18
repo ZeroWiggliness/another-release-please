@@ -56,7 +56,12 @@ export async function releasePr(args: string[], config: AppConfig): Promise<Rele
 
     logger.info(`📦 Using ${config.provider.name} provider`);
 
-    const ctx = await resolveCommitContext(config);
+    const alwaysCreatePr = config.release.alwaysCreatePr ?? false;
+    // Reuse the patch fallback without changing version calculation for other commands.
+    const releaseConfig = alwaysCreatePr
+      ? { ...config, release: { ...config.release, includeChores: true } }
+      : config;
+    const ctx = await resolveCommitContext(releaseConfig, alwaysCreatePr);
     const { targetBranch, conventionalCommits: conventionalCommitsSinceLastRelease, nextVersion, baseVersion } = ctx;
     // prBranch is the destination branch for the PR; defaults to targetBranch
     const prDestBranch = config.release.prBranch ?? targetBranch;
@@ -69,10 +74,13 @@ export async function releasePr(args: string[], config: AppConfig): Promise<Rele
     // Process manifests
     logger.info('');
     logger.info('📦 Processing manifests...');
-    const manifestProcessor = new ManifestProcessor(conventionalCommitsSinceLastRelease, config);
+    const manifestProcessor = new ManifestProcessor(conventionalCommitsSinceLastRelease, {
+      ...releaseConfig,
+      updateAllVersions: config.updateAllVersions || (alwaysCreatePr && conventionalCommitsSinceLastRelease.length === 0),
+    });
     const manifestResults = await manifestProcessor.process();
 
-    if (conventionalCommitsSinceLastRelease.length === 0) {
+    if (conventionalCommitsSinceLastRelease.length === 0 && !alwaysCreatePr) {
       logger.info('⚠️  No conventional commits found since last release. No Release PR created.');
       return { currentVersion: baseVersion, nextVersion: nextVersion, sourceBranch: '', targetBranch, created: false, updated: false, prTags: [], manifestFiles: [], manifestCurrentVersions: currentManifestVersions, manifestNextVersions: manifestResults.nextManifestVersions, dryRun: !!config.dryRun };
     }

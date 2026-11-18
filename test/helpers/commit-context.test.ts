@@ -266,7 +266,7 @@ describe('expandCommits', () => {
     const result = await expandCommits([commit]);
     expect(result).toHaveLength(1);
     expect(result[0].title).toBe('feat: add search');
-    expect(result[0].message).toBe('feat: add search\n\nBREAKING CHANGE: removes old API');
+    expect(result[0].message).toBe('feat: add search\nBREAKING CHANGE: removes old API');
   });
 
   test('BREAKING CHANGE line does not become a commit of its own', async () => {
@@ -301,14 +301,14 @@ describe('expandCommits', () => {
     expect(result[2].tags).toEqual([]);
   });
 
-  test('BREAKING CHANGE text is appended only to the first expanded commit', async () => {
+  test('BREAKING CHANGE text belongs only to the preceding expanded commit', async () => {
     const commit = makeRaw(
       'fix(something): Fixed something\n\nfeat: something else\nchore: another thing\nBREAKING CHANGE: A big breaking change',
     );
     const result = await expandCommits([commit]);
-    expect(result[0].message).toContain('BREAKING CHANGE: A big breaking change');
+    expect(result[0].message).not.toContain('BREAKING CHANGE');
     expect(result[1].message).not.toContain('BREAKING CHANGE');
-    expect(result[2].message).not.toContain('BREAKING CHANGE');
+    expect(result[2].message).toContain('BREAKING CHANGE: A big breaking change');
   });
 
   test('empty lines between conventional lines are ignored', async () => {
@@ -326,24 +326,24 @@ describe('expandCommits', () => {
     expect(result[0]).toBe(commit);
   });
 
-  test('commit starting with a conventional line still drops non-conventional body lines', async () => {
+  test('commit starting with a conventional line retains its body', async () => {
     const commit = makeRaw('feat: real commit\nsome prose\nfix: another');
     const result = await expandCommits([commit]);
     expect(result).toHaveLength(2);
     expect(result[0].title).toBe('feat: real commit');
+    expect(result[0].message).toBe('feat: real commit\nsome prose');
     expect(result[1].title).toBe('fix: another');
   });
 
-  test('BREAKING CHANGE in the middle is ignored and logs a warning', async () => {
+  test('BREAKING CHANGE before another entry is retained on its own entry', async () => {
     const commit = makeRaw('feat: add search\nBREAKING CHANGE: mid message\nfix: another');
     const result = await expandCommits([commit]);
     // only the two conventional lines become commits
     expect(result).toHaveLength(2);
     expect(result.map(c => c.title)).toEqual(['feat: add search', 'fix: another']);
-    // no breaking-change suffix on either
-    expect(result[0].message).not.toContain('BREAKING CHANGE');
+    expect(result[0].message).toContain('BREAKING CHANGE: mid message');
     expect(result[1].message).not.toContain('BREAKING CHANGE');
-    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('non-last position'));
+    expect(logger.warn).not.toHaveBeenCalled();
   });
 
   test('BREAKING CHANGE only on last line is captured (not a warning)', async () => {
@@ -422,16 +422,15 @@ describe('expandCommits', () => {
     expect(result[0].message).toBe('feat!: new feature\n\nBREAKING CHANGE: breaking feature');
   });
 
-  // Case 4: BREAKING CHANGE is NOT the last line — warn, no suffix, still expands
-  test('case 4 — BREAKING CHANGE not last: 3 commits, warning, no suffix', async () => {
+  test('breaking notes before additional entries stay with their preceding header', async () => {
     const commit = makeRaw(
       'feat!: new feature\n\nBREAKING CHANGE: breaking feature\n\nfix: other fix\nfix: another fix',
     );
     const result = await expandCommits([commit]);
     expect(result).toHaveLength(3);
     expect(result.map(c => c.title)).toEqual(['feat!: new feature', 'fix: other fix', 'fix: another fix']);
-    expect(result[0].message).not.toContain('BREAKING CHANGE');
-    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('non-last position'));
+    expect(result[0].message).toContain('BREAKING CHANGE: breaking feature');
+    expect(logger.warn).not.toHaveBeenCalled();
   });
 
   test('case 4 with tag — tag only on first expanded commit', async () => {
@@ -446,17 +445,16 @@ describe('expandCommits', () => {
     expect(result[2].tags).toEqual([]);
   });
 
-  // Case 5: BREAKING CHANGE IS the last line after multiple conventional lines
-  test('case 5 — BREAKING CHANGE last: 3 commits, first gets suffix', async () => {
+  test('a final breaking note belongs to the final entry', async () => {
     const commit = makeRaw(
       'feat!: new feature\n\nfix: other fix\nfix: another fix\n\nBREAKING CHANGE: breaking feature',
     );
     const result = await expandCommits([commit]);
     expect(result).toHaveLength(3);
     expect(result.map(c => c.title)).toEqual(['feat!: new feature', 'fix: other fix', 'fix: another fix']);
-    expect(result[0].message).toBe('feat!: new feature\n\nBREAKING CHANGE: breaking feature');
+    expect(result[0].message).toBe('feat!: new feature');
     expect(result[1].message).toBe('fix: other fix');
-    expect(result[2].message).toBe('fix: another fix');
+    expect(result[2].message).toBe('fix: another fix\n\nBREAKING CHANGE: breaking feature');
     expect(logger.warn).not.toHaveBeenCalled();
   });
 
@@ -491,5 +489,40 @@ describe('expandCommits', () => {
     expect(result[1].tags).toEqual([tag]);
     expect(result[2].title).toBe('fix: two');
     expect(result[2].tags).toEqual([]);
+  });
+
+  test('preserves CRLF bodies, per-entry trailers and indented metadata without phantom entries', async () => {
+    const commit = makeRaw([
+      'feat(api): add search', '', 'First paragraph.', '', 'Second paragraph.',
+      '', 'Refs: #42', 'Reviewed-by: Reviewer', '',
+      'fix(utils): handle unicode', '  BREAKING-CHANGE: use UTF-8',
+      '  PiperOrigin-RevId: 123', '',
+      'chore: release', '', 'Release-As: 3.0.0',
+    ].join('\r\n'), [tag], 'main');
+    const result = await expandCommits([commit]);
+    expect(result.map(c => c.title)).toEqual([
+      'feat(api): add search', 'fix(utils): handle unicode', 'chore: release',
+    ]);
+    expect(result.map(c => c.message)).toEqual([
+      'feat(api): add search\n\nFirst paragraph.\n\nSecond paragraph.\n\nRefs: #42\nReviewed-by: Reviewer',
+      'fix(utils): handle unicode\n  BREAKING-CHANGE: use UTF-8\n  PiperOrigin-RevId: 123',
+      'chore: release\n\nRelease-As: 3.0.0',
+    ]);
+    expect(commit.message).toContain('\r\n');
+    expect(result.map(c => c.tags)).toEqual([[tag], [], []]);
+    expect(result.every(c => c.sha === commit.sha && c.branch === 'main')).toBe(true);
+  });
+
+  test.each(['```', '~~~~'])('ignores example headers inside %s fences and other Markdown blocks', async fence => {
+    const message = [
+      'feat: document examples', '', `${fence}text`, 'fix!: not an entry',
+      'BREAKING CHANGE: not a footer', fence.slice(0, -1), 'feat: still fenced', fence,
+      '', '    feat: indented code', ' fix: indented text', '- fix: list item',
+      '> fix: quote', '', 'fix: actual entry', '', 'Own description.',
+    ].join('\n');
+    const result = await expandCommits([makeRaw(message)]);
+    expect(result.map(c => c.title)).toEqual(['feat: document examples', 'fix: actual entry']);
+    expect(result[0].message).toContain('feat: still fenced');
+    expect(result[1].message).toBe('fix: actual entry\n\nOwn description.');
   });
 });

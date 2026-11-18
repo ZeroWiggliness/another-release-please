@@ -26,6 +26,8 @@ export interface ReleaseConfig {
   maxCommits?: number;
   /** Include chore commits when determining release eligibility (default: false) */
   includeChores?: boolean;
+  /** Always create/update a release PR, using a patch bump when no release is otherwise triggered. Config-only; defaults to false. */
+  alwaysCreatePr?: boolean;
   /** Skip creating the provider tag. Does not affect whether a release is created. */
   skipTag?: boolean;
   /** Skip creating the provider release. When true, `created` will be false. */
@@ -38,6 +40,8 @@ export interface ReleaseConfig {
  * Complete application configuration
  */
 export interface AppConfig {
+  /** Include Markdown commit body descriptions beneath changelog bullets. Defaults to false. */
+  includeDescription?: boolean;
   /** Initialized provider instance */
   provider: GitProvider;
   /** Versioner instance for version management */
@@ -69,6 +73,8 @@ export interface AppConfig {
  * Replaces both the old .arprc.json and .arp.manifest.json files.
  */
 export interface ArpConfigFile {
+  /** Include Markdown commit body descriptions beneath changelog bullets. Config-only; defaults to false. */
+  includeDescription?: boolean;
   /** Provider type */
   provider?: 'gitlab' | 'github';
   /** GitLab configuration */

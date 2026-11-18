@@ -322,6 +322,7 @@ export class ManifestProcessor {
       commitPath,
       issueUrlTemplate,
       issueUrlIsCustom,
+      includeDescription: this.config.includeDescription ?? false,
     });
 
     const trimmedSection = section.trimEnd();

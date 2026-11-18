@@ -2,6 +2,52 @@ import { loadConfig } from '../../src/config/config-loader';
 import type { GitProvider } from '../../src/providers/git-provider';
 
 describe('config loader', () => {
+  it.each([
+    [{}, false],
+    [{ release: { alwaysCreatePr: false } }, false],
+    [{ release: { alwaysCreatePr: true } }, true],
+  ])('loads alwaysCreatePr configuration %j', async (fileConfig, expected) => {
+    const provider = {
+      getDefaultBranch: async () => 'main',
+      getFileContents: async () => JSON.stringify(fileConfig),
+    } as unknown as GitProvider;
+
+    const config = await loadConfig({ prerelease: false, dryRun: false }, provider);
+    expect(config.release.alwaysCreatePr).toBe(expected);
+  });
+
+  it.each(['true', 1, null, {}, []])('rejects invalid alwaysCreatePr %j', async alwaysCreatePr => {
+    const provider = {
+      getDefaultBranch: async () => 'main',
+      getFileContents: async () => JSON.stringify({ release: { alwaysCreatePr } }),
+    } as unknown as GitProvider;
+
+    await expect(loadConfig({ prerelease: false, dryRun: false }, provider))
+      .rejects.toThrow('Invalid release.alwaysCreatePr in config: expected a boolean.');
+  });
+
+  it.each([
+    [{}, false],
+    [{ includeDescription: false }, false],
+    [{ includeDescription: true }, true],
+  ])('loads description configuration %j', async (fileConfig, expected) => {
+    const provider = {
+      getDefaultBranch: async () => 'main',
+      getFileContents: async () => JSON.stringify(fileConfig),
+    } as unknown as GitProvider;
+    const config = await loadConfig({ prerelease: false, dryRun: false }, provider);
+    expect(config.includeDescription).toBe(expected);
+  });
+
+  it.each(['true', 1, null, {}, []])('rejects invalid includeDescription %j', async value => {
+    const provider = {
+      getDefaultBranch: async () => 'main',
+      getFileContents: async () => JSON.stringify({ includeDescription: value }),
+    } as unknown as GitProvider;
+    await expect(loadConfig({ prerelease: false, dryRun: false }, provider))
+      .rejects.toThrow('Invalid includeDescription in config: expected a boolean.');
+  });
+
   it('defaults manifest version to 0.1.0 when config file is missing', async () => {
     const provider = {
       getDefaultBranch: async () => 'master',

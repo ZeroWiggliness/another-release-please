@@ -59,6 +59,9 @@ export async function loadConfig(cliArgs: CliArgs = { prerelease: false, dryRun:
 
   // Load unified config file — try target branch first, fall back to default branch
   const fileConfig = await loadConfigFile(provider, targetBranch, defaultBranch);
+  if (fileConfig.includeDescription !== undefined && typeof fileConfig.includeDescription !== 'boolean') {
+    throw new Error('Invalid includeDescription in config: expected a boolean.');
+  }
 
   // Create versioner instance
   const versionerType = cliArgs.versioner || 'semver';
@@ -95,6 +98,7 @@ export async function loadConfig(cliArgs: CliArgs = { prerelease: false, dryRun:
     version,
     versionPrefix,
     issueUrlTemplate: cliArgs.issueUrlTemplate ?? fileConfig.issueUrlTemplate,
+    includeDescription: fileConfig.includeDescription ?? false,
     manifests,
     dryRun: cliArgs.dryRun || fileConfig.dryRun || process.env.ARP_DRY_RUN === 'true' || false,
     debug: cliArgs.debug || process.env.ARP_DEBUG === 'true' || false,
@@ -154,6 +158,10 @@ async function loadConfigFile(provider: GitProvider, targetBranch: string, defau
  * Load release configuration
  */
 function loadReleaseConfig(cliArgs: CliArgs, fileConfig: ArpConfigFile): ReleaseConfig {
+  if (fileConfig.release?.alwaysCreatePr !== undefined && typeof fileConfig.release.alwaysCreatePr !== 'boolean') {
+    throw new Error('Invalid release.alwaysCreatePr in config: expected a boolean.');
+  }
+
   return {
     prerelease: cliArgs.prerelease ?? fileConfig.release?.prerelease ?? false,
     targetBranch: cliArgs.targetBranch || fileConfig.release?.targetBranch,
@@ -163,6 +171,7 @@ function loadReleaseConfig(cliArgs: CliArgs, fileConfig: ArpConfigFile): Release
     maxReleases: cliArgs.maxReleases ?? fileConfig.release?.maxReleases ?? 10,
     maxCommits: cliArgs.maxCommits ?? fileConfig.release?.maxCommits ?? 100,
     includeChores: cliArgs.includeChores ?? fileConfig.release?.includeChores ?? false,
+    alwaysCreatePr: fileConfig.release?.alwaysCreatePr ?? false,
     skipTag: cliArgs.skipTag ?? fileConfig.release?.skipTag ?? false,
     skipRelease: cliArgs.skipRelease ?? fileConfig.release?.skipRelease ?? false,
     skipPrCreation: cliArgs.skipPrCreation ?? fileConfig.release?.skipPrCreation ?? false,
